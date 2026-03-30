@@ -1,0 +1,8 @@
+question_bank.json
+*.pyc
+__pycache__/
+.env
+venv/
+ai-procurement-key.json
+docs/*.docx
+*.docx
