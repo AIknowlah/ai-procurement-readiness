@@ -3,3 +3,4 @@ question_bank.json
 __pycache__/
 .env
 venv/
+.gitignore
