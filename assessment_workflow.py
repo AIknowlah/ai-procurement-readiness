@@ -31,6 +31,10 @@ from assessment_nodes import (
     completion_node
 )
 
+# SECURITY IMPORTS - Added March 2026
+from src.security import verify_reference_documents, SecurityError
+from src.security import InputValidator, ValidationError
+
 
 def should_continue_questions(state: AssessmentState) -> str:
     """
@@ -200,6 +204,65 @@ def run_assessment(
     print("\n" + "=" * 60)
     print("AI PROCUREMENT READINESS ASSESSMENT - STARTING")
     print("=" * 60)
+
+
+    # ========================================================================
+    # SECURITY CHECKS - Added March 2026 (v1.0 Hardening)
+    # ========================================================================
+    
+    # STEP 1: Verify reference documents (prevent tampered framework files)
+    print("\n[SECURITY] Verifying reference document integrity...")
+    try:
+        verify_reference_documents()
+        print("✅ Reference documents verified (SHA-256 checksums match)")
+    except SecurityError as e:
+        print(f"\n🔴 SECURITY ERROR: Reference document verification failed!")
+        print(str(e))
+        print("\n⛔ Assessment ABORTED - Cannot proceed with tampered documents")
+        raise  # Re-raise to prevent workflow from continuing
+    
+    # STEP 2: Validate user inputs (prevent injection attacks)
+    print("\n[SECURITY] Validating input parameters...")
+    validator = InputValidator()
+    
+    try:
+        # Validate vendor name
+        vendor_name = validator.validate_vendor_name(vendor_name)
+        print(f"✅ Vendor name validated: {vendor_name}")
+        
+        # Validate system description if provided
+        if system_description:
+            system_description = validator.validate_system_description(system_description)
+            print(f"✅ System description validated ({len(system_description)} chars)")
+        
+        # Validate assessor ID (basic format check)
+        if not assessor_id or len(assessor_id) < 3:
+            raise ValidationError("Assessor ID must be at least 3 characters")
+        print(f"✅ Assessor ID validated: {assessor_id}")
+        
+    except ValidationError as e:
+        print(f"\n❌ INPUT VALIDATION ERROR: {e}")
+        print("\n⛔ Assessment ABORTED - Invalid input parameters")
+        raise  # Re-raise to prevent workflow from continuing
+    
+    print("\n✅ All security checks passed - proceeding with assessment")
+    
+    # ========================================================================
+    # END OF SECURITY CHECKS
+    # ========================================================================
+    
+    # Create initial state
+    initial_state = create_initial_state(
+        assessment_id=assessment_id,
+        vendor_name=vendor_name,  # Now using validated vendor_name
+        assessor_id=assessor_id,
+        system_name=system_name,
+        system_description=system_description,  # Now using validated description
+        assessor_agency=assessor_agency,
+        procurement_stage=procurement_stage,
+        estimated_contract_value=estimated_contract_value,
+        notes=notes
+    )
     
     # Create initial state
     initial_state = create_initial_state(
